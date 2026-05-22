@@ -1,0 +1,1039 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>R2* / T2* Fit Tool — Liver LIC and Cardiac T2*</title>
+
+<style>
+  :root {
+    --b:#0f172a;
+    --muted:#475569;
+    --line:#e2e8f0;
+    --card:#f8fafc;
+    --blue:#2563eb;
+    --orange:#f59e0b;
+    --gray:#94a3b8;
+    --green:#10b981;
+    --red:#ef4444;
+    --sky:#0ea5e9;
+  }
+
+  body {
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    margin:24px;
+    color:var(--b);
+    background:white;
+  }
+
+  h1 {
+    font-size:1.2rem;
+    margin:0 0 12px;
+  }
+
+  h2 {
+    font-size:1rem;
+    margin:0 0 10px;
+  }
+
+  .grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+
+  @media(max-width:900px) {
+    .grid {
+      grid-template-columns:1fr;
+    }
+  }
+
+  .card {
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px;
+    background:white;
+  }
+
+  .smallcard {
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    margin-top:12px;
+  }
+
+  table {
+    width:100%;
+    border-collapse:collapse;
+  }
+
+  th, td {
+    border-bottom:1px solid var(--line);
+    padding:6px 8px;
+    text-align:right;
+  }
+
+  th {
+    text-align:center;
+    font-weight:600;
+  }
+
+  input[type=number], select {
+    width:100%;
+    padding:6px 8px;
+    border:1px solid #cbd5e1;
+    border-radius:8px;
+    background:white;
+  }
+
+  label {
+    font-size:.9rem;
+    color:var(--muted);
+    font-weight:600;
+  }
+
+  .topbar {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-bottom:12px;
+  }
+
+  @media(max-width:600px) {
+    .topbar {
+      grid-template-columns:1fr;
+    }
+  }
+
+  .actions {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:10px;
+  }
+
+  button {
+    border:none;
+    padding:10px 14px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:600;
+  }
+
+  .fit {
+    background:var(--sky);
+    color:white;
+  }
+
+  .add {
+    background:var(--green);
+    color:white;
+  }
+
+  .rowbtn {
+    background:#f1f5f9;
+    border:1px solid #cbd5e1;
+    padding:2px 8px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+
+  .metrics {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(120px,1fr));
+    gap:10px;
+    margin-top:10px;
+  }
+
+  @media(max-width:700px) {
+    .metrics {
+      grid-template-columns:1fr;
+    }
+  }
+
+  .metric {
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px;
+    text-align:center;
+  }
+
+  .metric .label {
+    color:var(--muted);
+    font-size:.85rem;
+  }
+
+  .metric .value {
+    font-size:1.1rem;
+    font-weight:700;
+  }
+
+  .rowhint {
+    color:var(--muted);
+    font-size:.85rem;
+    margin-top:8px;
+    line-height:1.45;
+  }
+
+  .warning {
+    display:none;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+    border-radius:10px;
+    padding:10px;
+    margin-top:10px;
+    font-size:.9rem;
+    line-height:1.45;
+  }
+
+  .guides {
+    margin-top:14px;
+    display:grid;
+    gap:12px;
+  }
+
+  .guidetable {
+    width:100%;
+    border-collapse:collapse;
+  }
+
+  .guidetable th, .guidetable td {
+    border:1px solid #e2e8f0;
+    padding:6px 8px;
+    text-align:left;
+  }
+
+  .guidetable th {
+    background:#f8fafc;
+  }
+
+  .hit {
+    background:#fde68a;
+    font-weight:700;
+  }
+
+  canvas {
+    width:100%;
+    height:300px;
+    border:1px solid var(--line);
+    border-radius:10px;
+  }
+
+  footer {
+    margin-top:24px;
+    text-align:center;
+    font-size:0.9rem;
+    color:#475569;
+  }
+
+  .hidden {
+    display:none !important;
+  }
+</style>
+
+<body>
+
+<div class="app">
+
+  <h1>R2* / T2* Fit Tool — Liver LIC and Cardiac T2*</h1>
+
+  <div class="grid">
+
+    <div class="card">
+
+      <div class="topbar">
+        <div>
+          <label for="modeSelect">Analysis mode</label>
+          <select id="modeSelect">
+            <option value="liver">Liver LIC — Wood 1.5T</option>
+            <option value="heart">Cardiac T2*</option>
+          </select>
+        </div>
+
+        <div id="truncationControl" class="hidden">
+          <label for="lastEchoSelect">Cardiac truncation: last echo to include</label>
+          <select id="lastEchoSelect"></select>
+        </div>
+      </div>
+
+      <div class="rowhint" id="modelText">
+        Model: <b>S(TE) = A · exp(−R2* · TE/1000) + C</b><br>
+        Liver LIC calibration: <b>LIC = 0.0254 × R2* + 0.202</b> — Wood 1.5T.
+      </div>
+
+      <div class="warning" id="warningBox"></div>
+
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>Echo</th>
+            <th>TE (ms)</th>
+            <th>Signal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="actions">
+        <button class="add" id="addRow">+ Add Row</button>
+        <button class="fit" id="fitBtn">Fit Now</button>
+      </div>
+
+      <div class="rowhint" id="instructionText">
+        Tip: Keep units consistent. TE is in <b>ms</b>; R2* will be in <b>Hz</b>. 
+        In liver mode, the tool uses all echoes with an offset model.
+      </div>
+
+      <div class="metrics" id="metricsGrid">
+        <div class="metric">
+          <div class="label">R2* (Hz)</div>
+          <div class="value" id="r2s">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="label">T2* (ms)</div>
+          <div class="value" id="t2s">—</div>
+        </div>
+
+        <div class="metric" id="licMetric">
+          <div class="label">LIC (mg/g)</div>
+          <div class="value" id="lic">—</div>
+        </div>
+      </div>
+
+      <div class="smallcard" id="quickConverter">
+        <h2>Quick R2* → LIC Calculator — Wood 1.5T</h2>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label for="convR2s">R2* (Hz)</label>
+            <input id="convR2s" type="number" step="0.1" min="0" placeholder="e.g., 1200">
+          </div>
+        </div>
+
+        <div class="metrics" style="grid-template-columns:repeat(2,minmax(120px,1fr))">
+          <div class="metric">
+            <div class="label">LIC (mg/g)</div>
+            <div class="value" id="convLIC">—</div>
+          </div>
+          <div class="metric">
+            <div class="label">T2* (ms)</div>
+            <div class="value" id="convT2s">—</div>
+          </div>
+        </div>
+
+        <div class="rowhint">
+          Formula: <b>LIC = 0.0254 × R2* + 0.202</b>. 
+          This LIC conversion is for liver, not heart.
+        </div>
+      </div>
+
+      <div class="guides">
+
+        <table class="guidetable" id="liverGuide">
+          <thead>
+            <tr><th colspan="2">Liver iron category by LIC, mg/g dry weight</th></tr>
+          </thead>
+          <tbody>
+            <tr data-min="-inf" data-max="1.8"><td>Normal</td><td>≤ 1.8</td></tr>
+            <tr data-min="1.8" data-max="7"><td>Mild</td><td>&gt; 1.8 – 7</td></tr>
+            <tr data-min="7" data-max="15"><td>Moderate</td><td>&gt; 7 – 15</td></tr>
+            <tr data-min="15" data-max="inf"><td>Severe</td><td>&gt; 15</td></tr>
+          </tbody>
+        </table>
+
+        <table class="guidetable" id="heartGuide">
+          <thead>
+            <tr><th colspan="2">Cardiac myocardial T2* category at 1.5T</th></tr>
+          </thead>
+          <tbody>
+            <tr data-type="gt" data-th="20"><td>Normal</td><td>&gt; 20 ms</td></tr>
+            <tr data-range="14-20"><td>Mild myocardial iron</td><td>14 – 20 ms</td></tr>
+            <tr data-range="10-14"><td>Moderate myocardial iron</td><td>10 – 14 ms</td></tr>
+            <tr data-type="lt" data-th="10"><td>Severe myocardial iron</td><td>&lt; 10 ms</td></tr>
+          </tbody>
+        </table>
+
+      </div>
+
+    </div>
+
+    <div class="card">
+      <h2>Measured vs Fitted Curve</h2>
+      <canvas id="plot" width="700" height="300"></canvas>
+      <div class="rowhint" id="plotLegend">
+        Blue dots = included measured points. Yellow line = fitted model.
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Developed by <b>Dr. Abdulrhman Aleisa</b> —
+    Contact: <a href="mailto:abaleisa@ksu.edu.sa" style="color:#0ea5e9;text-decoration:none;">abaleisa@ksu.edu.sa</a>
+  </footer>
+
+</div>
+
+<script>
+/* ============================================================
+   Basic setup
+   ============================================================ */
+
+const tbody = document.querySelector('#tbl tbody');
+const modeSelect = document.getElementById('modeSelect');
+const lastEchoSelect = document.getElementById('lastEchoSelect');
+const truncationControl = document.getElementById('truncationControl');
+
+const modelText = document.getElementById('modelText');
+const instructionText = document.getElementById('instructionText');
+const warningBox = document.getElementById('warningBox');
+
+const licMetric = document.getElementById('licMetric');
+const quickConverter = document.getElementById('quickConverter');
+
+document.getElementById('addRow').onclick = () => {
+  addRow();
+  updateEchoNumbers();
+  updateLastEchoOptions();
+  draw();
+};
+
+document.getElementById('fitBtn').onclick = fitNow;
+
+modeSelect.onchange = () => {
+  updateModeUI();
+  updateLastEchoOptions();
+  clearResults();
+  draw();
+};
+
+lastEchoSelect.onchange = () => {
+  clearResults();
+  draw();
+};
+
+function currentMode() {
+  return modeSelect.value;
+}
+
+/* ============================================================
+   Table functions
+   ============================================================ */
+
+function addRow(te=1, s=100) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="echoNum" style="text-align:center">1</td>
+    <td><input type="number" step="0.01" min="0" value="${te}"></td>
+    <td><input type="number" step="0.01" min="0" value="${s}"></td>
+    <td style="text-align:center"><button class="rowbtn" title="remove">×</button></td>
+  `;
+
+  tr.querySelector('.rowbtn').onclick = () => {
+    tr.remove();
+    updateEchoNumbers();
+    updateLastEchoOptions();
+    clearResults();
+    draw();
+  };
+
+  tr.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      clearResults();
+      draw();
+    });
+  });
+
+  tbody.appendChild(tr);
+}
+
+function updateEchoNumbers() {
+  [...tbody.querySelectorAll('tr')].forEach((tr, idx) => {
+    tr.querySelector('.echoNum').textContent = idx + 1;
+  });
+}
+
+function getData() {
+  const rows = [];
+
+  [...tbody.querySelectorAll('tr')].forEach((tr, idx) => {
+    const te = parseFloat(tr.children[1].querySelector('input').value);
+    const si = parseFloat(tr.children[2].querySelector('input').value);
+
+    if (isFinite(te) && isFinite(si)) {
+      rows.push({
+        index: idx + 1,
+        te: te,
+        signal: si
+      });
+    }
+  });
+
+  rows.sort((a,b) => a.te - b.te);
+  return rows;
+}
+
+function getIncludedData() {
+  const rows = getData();
+
+  if (currentMode() === 'heart') {
+    const lastEcho = parseInt(lastEchoSelect.value || rows.length, 10);
+    return rows.filter(r => r.index <= lastEcho);
+  }
+
+  return rows;
+}
+
+function updateLastEchoOptions() {
+  const rows = getData();
+  const previous = parseInt(lastEchoSelect.value || rows.length, 10);
+
+  lastEchoSelect.innerHTML = '';
+
+  rows.forEach((row, idx) => {
+    const opt = document.createElement('option');
+    opt.value = row.index;
+    opt.textContent = `Echo ${row.index}`;
+    lastEchoSelect.appendChild(opt);
+  });
+
+  if (rows.length > 0) {
+    const newValue = Math.min(previous || rows.length, rows.length);
+    lastEchoSelect.value = newValue;
+  }
+}
+
+/* ============================================================
+   Models
+   ============================================================ */
+
+// Liver Wood-style offset model:
+// S(TE) = A * exp(-R2* * TE/1000) + C
+function liverModel(p, te_ms) {
+  const [A, R2s, C] = p;
+  return A * Math.exp(-R2s * te_ms / 1000) + C;
+}
+
+// Cardiac no-offset model:
+// S(TE) = A * exp(-R2* * TE/1000)
+function heartModel(p, te_ms) {
+  const [A, R2s] = p;
+  return A * Math.exp(-R2s * te_ms / 1000);
+}
+
+function sseLiver(p, rows) {
+  let e = 0;
+  for (const r of rows) {
+    const residual = r.signal - liverModel(p, r.te);
+    e += residual * residual;
+  }
+  return e;
+}
+
+function sseHeart(p, rows) {
+  let e = 0;
+  for (const r of rows) {
+    const residual = r.signal - heartModel(p, r.te);
+    e += residual * residual;
+  }
+  return e;
+}
+
+/* ============================================================
+   Nelder-Mead optimizer
+   ============================================================ */
+
+function nelderMead(f, start, args, maxIter=700, mode='liver') {
+  const n = start.length;
+  let simplex = [start.slice()];
+
+  for (let i=0; i<n; i++) {
+    const v = start.slice();
+    v[i] = v[i] ? v[i] * 1.05 : 0.05;
+    simplex.push(v);
+  }
+
+  function clamp(p) {
+    if (mode === 'heart') {
+      const [A, R2s] = p;
+      return [
+        Math.max(0, K),
+        Math.max(1e-6, R2s)
+      ];
+    } else {
+      const [A, R2s, C] = p;
+      return [
+        Math.max(0, A),
+        Math.max(1e-6, R2s),
+        Math.max(0, C)
+      ];
+    }
+  }
+
+  function sort() {
+    simplex.sort((a,b) => f(a, ...args) - f(b, ...args));
+  }
+
+  function centroid() {
+    const c = new Array(n).fill(0);
+    for (let i=0; i<n; i++) {
+      for (let j=0; j<n; j++) {
+        c[j] += simplex[i][j];
+      }
+    }
+    for (let j=0; j<n; j++) c[j] /= n;
+    return c;
+  }
+
+  const alpha=1, gamma=2, rho=0.5, sigma=0.5;
+
+  sort();
+
+  for (let iter=0; iter<maxIter; iter++) {
+    sort();
+
+    const worst = simplex[n];
+    const best = simplex[0];
+    const c = centroid();
+
+    let xr = c.map((ci,j) => ci + alpha * (ci - worst[j]));
+    xr = clamp(xr);
+
+    const fr = f(xr, ...args);
+    const fbest = f(best, ...args);
+    const f2nd = f(simplex[n-1], ...args);
+    const fworst = f(worst, ...args);
+
+    if (fr < fbest) {
+      let xe = c.map((ci,j) => ci + gamma * (xr[j] - ci));
+      xe = clamp(xe);
+      simplex[n] = f(xe, ...args) < fr ? xe : xr;
+    } else if (fr < f2nd) {
+      simplex[n] = xr;
+    } else {
+      let xc;
+      if (fr < fworst) {
+        xc = c.map((ci,j) => ci + rho * (xr[j] - ci));
+      } else {
+        xc = c.map((ci,j) => ci + rho * (worst[j] - ci));
+      }
+
+      xc = clamp(xc);
+
+      if (f(xc, ...args) < fworst) {
+        simplex[n] = xc;
+      } else {
+        for (let i=1; i<simplex.length; i++) {
+          simplex[i] = simplex[i].map((vi,j) => best[j] + sigma * (vi - best[j]));
+          simplex[i] = clamp(simplex[i]);
+        }
+      }
+    }
+
+    if (Math.abs(f(simplex[0], ...args) - f(simplex[n], ...args)) < 1e-10) {
+      break;
+    }
+  }
+
+  sort();
+  return simplex[0];
+}
+
+/* ============================================================
+   Fitting
+   ============================================================ */
+
+let lastFitParams = null;
+let lastFitMode = null;
+
+function fitNow() {
+  hideWarning();
+
+  const rowsAll = getData();
+  const rowsIncluded = getIncludedData();
+
+  if (currentMode() === 'liver') {
+    if (rowsIncluded.length < 4) {
+      showWarning('Liver offset fitting estimates A, R2* and C. At least 4 echoes are recommended for a stable fit.');
+      return;
+    }
+
+    const signals = rowsIncluded.map(r => r.signal);
+    const Smax = Math.max(...signals);
+    const Smin = Math.min(...signals);
+
+    const start = [
+      Math.max(1, Smax - Smin),
+      100,
+      Math.max(0, Smin)
+    ];
+
+    const p = nelderMead((params, rows) => sseLiver(params, rows), start, [rowsIncluded], 700, 'liver');
+    const [A, R2s, C] = p;
+
+    const T2s_ms = 1000 / R2s;
+    const LIC = 0.0254 * R2s + 0.202;
+
+    document.getElementById('r2s').textContent = R2s.toFixed(1);
+    document.getElementById('t2s').textContent = T2s_ms.toFixed(2);
+    document.getElementById('lic').textContent = LIC.toFixed(2);
+
+    highlightGuides(LIC, T2s_ms);
+
+    lastFitParams = p;
+    lastFitMode = 'liver';
+
+    draw(p);
+
+  } else {
+    if (rowsIncluded.length < 3) {
+      showWarning('Cardiac T2* fitting requires at least 3 included echoes. Increase the last echo included or add more echo data.');
+      return;
+    }
+
+    if (rowsIncluded.length === 3) {
+      showWarning('Only 3 echoes are included. This is acceptable as a minimum for cardiac T2* fitting, but review the curve carefully. Four or more echoes are preferred when available.');
+    }
+
+    const signals = rowsIncluded.map(r => r.signal);
+    const Smax = Math.max(...signals);
+
+    const start = [
+      Math.max(1, Smax),
+      50
+    ];
+
+    const p = nelderMead((params, rows) => sseHeart(params, rows), start, [rowsIncluded], 700, 'heart');
+    const [A, R2s] = p;
+
+    const T2s_ms = 1000 / R2s;
+
+    document.getElementById('r2s').textContent = R2s.toFixed(1);
+    document.getElementById('t2s').textContent = T2s_ms.toFixed(2);
+    document.getElementById('lic').textContent = '—';
+
+    highlightGuides(null, T2s_ms);
+
+    lastFitParams = p;
+    lastFitMode = 'heart';
+
+    draw(p);
+  }
+}
+
+function clearResults() {
+  document.getElementById('r2s').textContent = '—';
+  document.getElementById('t2s').textContent = '—';
+  document.getElementById('lic').textContent = '—';
+
+  lastFitParams = null;
+  lastFitMode = null;
+
+  clearGuideHighlights();
+  hideWarning();
+}
+
+function showWarning(msg) {
+  warningBox.textContent = msg;
+  warningBox.style.display = 'block';
+}
+
+function hideWarning() {
+  warningBox.textContent = '';
+  warningBox.style.display = 'none';
+}
+
+/* ============================================================
+   Guides
+   ============================================================ */
+
+function clearGuideHighlights() {
+  document.querySelectorAll('#liverGuide tr, #heartGuide tr').forEach(el => {
+    el.classList.remove('hit');
+  });
+}
+
+function highlightGuides(licVal, t2msVal) {
+  clearGuideHighlights();
+
+  if (currentMode() === 'liver' && isFinite(licVal)) {
+    document.querySelectorAll('#liverGuide tbody tr').forEach(tr => {
+      const min = tr.getAttribute('data-min');
+      const max = tr.getAttribute('data-max');
+
+      const lo = (min === '-inf') ? -Infinity : parseFloat(min);
+      const hi = (max === 'inf') ? Infinity : parseFloat(max);
+
+      if (licVal > lo && licVal <= hi) {
+        tr.classList.add('hit');
+      }
+    });
+  }
+
+  if (currentMode() === 'heart' && isFinite(t2msVal)) {
+    document.querySelectorAll('#heartGuide tbody tr').forEach(tr => {
+      const typ = tr.getAttribute('data-type');
+
+      if (typ === 'gt') {
+        const th = parseFloat(tr.getAttribute('data-th'));
+        if (t2msVal > th) tr.classList.add('hit');
+      } else if (typ === 'lt') {
+        const th = parseFloat(tr.getAttribute('data-th'));
+        if (t2msVal < th) tr.classList.add('hit');
+      } else {
+        const rg = tr.getAttribute('data-range');
+        if (rg) {
+          const [a,b] = rg.split('-').map(parseFloat);
+          if (t2msVal >= a && t2msVal <= b) {
+            tr.classList.add('hit');
+          }
+        }
+      }
+    });
+  }
+}
+
+/* ============================================================
+   Plot
+   ============================================================ */
+
+const canvas = document.getElementById('plot');
+const ctx = canvas.getContext('2d');
+
+function draw(params=null) {
+  const rowsAll = getData();
+  const rowsIncluded = getIncludedData();
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (rowsAll.length === 0) return;
+
+  const m = {l:50, r:10, t:10, b:30};
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const TEs = rowsAll.map(r => r.te);
+  const S = rowsAll.map(r => r.signal);
+
+  const xmin = Math.min(...TEs, 0);
+  const xmax = Math.max(...TEs, 1);
+  const ymin = 0;
+  const ymax = Math.max(...S, 1) * 1.1;
+
+  const x2px = x => m.l + (x - xmin) / (xmax - xmin || 1) * (W - m.l - m.r);
+  const y2px = y => H - m.b - (y - ymin) / (ymax - ymin || 1) * (H - m.t - m.b);
+
+  // Axes
+  ctx.strokeStyle = "#94a3b8";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(m.l, m.t);
+  ctx.lineTo(m.l, H - m.b);
+  ctx.lineTo(W - m.r, H - m.b);
+  ctx.stroke();
+
+  // X ticks
+  ctx.fillStyle = "#475569";
+  ctx.textAlign = "center";
+  ctx.font = "12px system-ui";
+
+  for (let i=0; i<=5; i++) {
+    const x = xmin + (xmax - xmin) * i / 5;
+    const px = x2px(x);
+    ctx.beginPath();
+    ctx.moveTo(px, H - m.b);
+    ctx.lineTo(px, H - m.b + 4);
+    ctx.stroke();
+    ctx.fillText(x.toFixed(1), px, H - m.b + 16);
+  }
+
+  // Y ticks
+  ctx.textAlign = "right";
+
+  for (let i=0; i<=4; i++) {
+    const y = ymin + (ymax - ymin) * i / 4;
+    const py = y2px(y);
+    ctx.beginPath();
+    ctx.moveTo(m.l - 4, py);
+    ctx.lineTo(m.l, py);
+    ctx.stroke();
+    ctx.fillText(Math.round(y), m.l - 6, py + 4);
+  }
+
+  const includedIndexes = new Set(rowsIncluded.map(r => r.index));
+
+  // Excluded points first, gray
+  if (currentMode() === 'heart') {
+    ctx.fillStyle = "#cbd5e1";
+    for (const r of rowsAll) {
+      if (!includedIndexes.has(r.index)) {
+        const px = x2px(r.te);
+        const py = y2px(r.signal);
+        ctx.beginPath();
+        ctx.arc(px, py, 4, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Included points, blue
+  ctx.fillStyle = "#2563eb";
+  for (const r of rowsAll) {
+    if (currentMode() === 'liver' || includedIndexes.has(r.index)) {
+      const px = x2px(r.te);
+      const py = y2px(r.signal);
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
+
+  // Fitted curve
+  if (params) {
+    ctx.strokeStyle = "#f59e0b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    for (let i=0; i<400; i++) {
+      const te = xmin + (xmax - xmin) * i / 399;
+      let y;
+
+      if (lastFitMode === 'heart') {
+        y = heartModel(params, te);
+      } else {
+        y = liverModel(params, te);
+      }
+
+      const px = x2px(te);
+      const py = y2px(y);
+
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+
+    ctx.stroke();
+  }
+}
+
+/* ============================================================
+   Quick converter
+   ============================================================ */
+
+function licFromR2s_Wood2005(r2sHz) {
+  return 0.0254 * r2sHz + 0.202;
+}
+
+function t2sFromR2s_ms(r2sHz) {
+  return 1000 / r2sHz;
+}
+
+(function initQuickConverter() {
+  const r2in = document.getElementById('convR2s');
+  const outLIC = document.getElementById('convLIC');
+  const outT2s = document.getElementById('convT2s');
+
+  const update = () => {
+    const v = parseFloat(r2in.value);
+
+    if (!isFinite(v) || v <= 0) {
+      outLIC.textContent = '—';
+      outT2s.textContent = '—';
+      clearGuideHighlights();
+      return;
+    }
+
+    const lic = licFromR2s_Wood2005(v);
+    const t2s = t2sFromR2s_ms(v);
+
+    outLIC.textContent = lic.toFixed(2);
+    outT2s.textContent = t2s.toFixed(2);
+
+    if (currentMode() === 'liver') {
+      highlightGuides(lic, t2s);
+    }
+  };
+
+  r2in.addEventListener('input', update);
+})();
+
+/* ============================================================
+   Mode UI
+   ============================================================ */
+
+function updateModeUI() {
+  if (currentMode() === 'liver') {
+    truncationControl.classList.add('hidden');
+    licMetric.classList.remove('hidden');
+    quickConverter.classList.remove('hidden');
+
+    document.getElementById('liverGuide').classList.remove('hidden');
+    document.getElementById('heartGuide').classList.add('hidden');
+
+    modelText.innerHTML = `
+      Model: <b>S(TE) = A · exp(−R2* · TE/1000) + C</b><br>
+      Liver LIC calibration: <b>LIC = 0.0254 × R2* + 0.202</b> — Wood 1.5T.
+    `;
+
+    instructionText.innerHTML = `
+      Tip: Keep units consistent. TE is in <b>ms</b>; R2* will be in <b>Hz</b>.
+      In liver mode, the tool uses all echoes with a Wood-style variable-offset model.
+    `;
+
+    document.getElementById('plotLegend').innerHTML = `
+      Blue dots = measured points. Yellow line = fitted offset model.
+    `;
+
+  } else {
+    truncationControl.classList.remove('hidden');
+    licMetric.classList.add('hidden');
+    quickConverter.classList.add('hidden');
+
+    document.getElementById('liverGuide').classList.add('hidden');
+    document.getElementById('heartGuide').classList.remove('hidden');
+
+    modelText.innerHTML = `
+      Model: <b>S(TE) = A · exp(−R2* · TE/1000)</b><br>
+      Cardiac mode reports <b>T2* = 1000/R2*</b>. LIC is not applicable for the heart.
+    `;
+
+    instructionText.innerHTML = `
+      Manual truncation: choose the <b>last echo to include</b>. 
+      Echoes after this point are excluded from fitting but remain visible on the graph.
+      Keep the descending exponential part of the curve and exclude the late flat/noisy tail.
+      At least <b>3 included echoes</b> are required.
+    `;
+
+    document.getElementById('plotLegend').innerHTML = `
+      Blue dots = included echoes. Gray dots = excluded echoes. Yellow line = fitted no-offset cardiac model.
+    `;
+  }
+}
+
+/* ============================================================
+   Initialization
+   ============================================================ */
+
+// Example data
+[
+  [1.0, 980],
+  [2.0, 780],
+  [3.0, 620],
+  [4.0, 480],
+  [5.0, 380],
+  [6.0, 300]
+].forEach(([te,s]) => addRow(te,s));
+
+updateEchoNumbers();
+updateLastEchoOptions();
+updateModeUI();
+draw();
+
+</script>
+
+</body>
+</html>
