@@ -334,15 +334,31 @@
 
       <div class="guides">
 
-        <table class="guidetable" id="liverGuide">
+         <table class="guidetable" id="liverGuide">
           <thead>
-            <tr><th colspan="2">Liver iron category by LIC, mg/g dry weight</th></tr>
+            <tr><th colspan="2">Liver iron severity by LIC, mg Fe/g dry liver</th></tr>
           </thead>
           <tbody>
-            <tr data-min="-inf" data-max="1.8"><td>Normal</td><td>≤ 1.8</td></tr>
-            <tr data-min="1.8" data-max="7"><td>Mild</td><td>&gt; 1.8 – 7</td></tr>
-            <tr data-min="7" data-max="15"><td>Moderate</td><td>&gt; 7 – 15</td></tr>
-            <tr data-min="15" data-max="inf"><td>Severe</td><td>&gt; 15</td></tr>
+            <tr data-min="-inf" data-max="1.8">
+              <td>None / normal</td>
+              <td>&lt; 1.8</td>
+            </tr>
+            <tr data-min="1.8" data-max="3.2">
+              <td>Mild</td>
+              <td>1.8 – 3.2</td>
+            </tr>
+            <tr data-min="3.2" data-max="7">
+              <td>Moderate</td>
+              <td>&gt; 3.2 – 7.0</td>
+            </tr>
+            <tr data-min="7" data-max="15">
+              <td>Severe</td>
+              <td>&gt; 7.0 – 15.0</td>
+            </tr>
+            <tr data-min="15" data-max="inf">
+              <td>Extreme</td>
+              <td>&ge; 15.0</td>
+            </tr>
           </tbody>
         </table>
 
